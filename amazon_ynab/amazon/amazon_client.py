@@ -149,57 +149,56 @@ class AmazonClient:
                 "end of the line" in self.driver.page_source
             ):
                 break
-            else:
-                pagination_elem = self.wait_driver.until(
-                    EC.element_to_be_clickable(
+            pagination_elem = self.wait_driver.until(
+                EC.element_to_be_clickable(
+                    (
+                        By.XPATH,
+                        '//span[contains(text(), "Next Page")]//parent::span/input',
+                    )
+                )
+            )
+
+            # cutoff date might be in the middle of the page, so we need to count
+            # how many transactions are older than the cutoff date, and then
+            # only parse those
+            date_containers = self.driver.find_elements(
+                By.CSS_SELECTOR, ".apx-transaction-date-container"
+            )
+
+            dates = []
+            for date_container in date_containers:
+                # Extract the date from the current container
+                date = datetime.strptime(
+                    date_container.find_element(By.CSS_SELECTOR, "span").text,
+                    "%B %d, %Y",
+                )
+
+                # Get the number of transactions under the current date container
+                transaction_count = len(
+                    date_container.find_elements(
+                        By.XPATH,
                         (
-                            By.XPATH,
-                            '//span[contains(text(), "Next Page")]//parent::span/input',
-                        )
+                            "following-sibling::*[1]//div[contains(@class,"
+                            " 'apx-transactions-line-item-component-container')]"
+                        ),
                     )
                 )
+                # Add the date to the list once for each transaction
+                dates.extend([date] * transaction_count)
 
-                # cutoff date might be in the middle of the page, so we need to count
-                # how many transactions are older than the cutoff date, and then
-                # only parse those
-                date_containers = self.driver.find_elements(
-                    By.CSS_SELECTOR, ".apx-transaction-date-container"
-                )
-
-                dates = []
-                for date_container in date_containers:
-                    # Extract the date from the current container
-                    date = datetime.strptime(
-                        date_container.find_element(By.CSS_SELECTOR, "span").text,
-                        "%B %d, %Y",
-                    )
-
-                    # Get the number of transactions under the current date container
-                    transaction_count = len(
-                        date_container.find_elements(
-                            By.XPATH,
-                            (
-                                "following-sibling::*[1]//div[contains(@class,"
-                                " 'apx-transactions-line-item-component-container')]"
-                            ),
-                        )
-                    )
-                    # Add the date to the list once for each transaction
-                    dates.extend([date] * transaction_count)
-
-                transactions_to_count: int = len(
-                    list(
-                        filter(
-                            lambda date: date > self.cutoff_date,
-                            dates,
-                        )
+            transactions_to_count: int = len(
+                list(
+                    filter(
+                        lambda date: date > self.cutoff_date,
+                        dates,
                     )
                 )
+            )
 
-                self.raw_transaction_data += transaction_texts[:transactions_to_count]
+            self.raw_transaction_data += transaction_texts[:transactions_to_count]
 
-                pagination_elem.click()
-                time.sleep(randint(200, 350) / 100.0)
+            pagination_elem.click()
+            time.sleep(randint(200, 350) / 100.0)
 
     @staticmethod
     def _transaction_to_dict(
@@ -211,11 +210,7 @@ class AmazonClient:
         amount: float = float(transaction[1].replace("$", "").replace(",", ""))
         order_number: str = transaction[2].split(" ")[-1].replace("#", "")
 
-        if transaction[-1].split()[-1].lower() == "tips":
-            is_tip: bool = True
-        else:
-            is_tip = False
-
+        is_tip = transaction[-1].split()[-1].lower() == "tips"
         return order_number, {
             "payments": {payment_type: amount},
             "is_tip": is_tip,
@@ -228,9 +223,7 @@ class AmazonClient:
 
         for transaction in transactions:
             order_number, order_info = self._transaction_to_dict(transaction)
-            if order_info["is_tip"]:  # dont parse tip orders
-                pass
-            else:
+            if not order_info["is_tip"]:
                 # some transactions can be paid with more than one type of payment type,
                 # lets look if the order number
                 # already exists, meaning that there are multiple entries for the same

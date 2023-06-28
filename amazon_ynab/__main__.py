@@ -46,20 +46,19 @@ def init_app(
             "[yellow]WARNING:[/] This will overwrite the secrets file at"
             f" {path_to_secrets}"
         )
-        confirm = typer.confirm("Are you sure you want to overwrite the secrets file?")
-        if confirm:
+        if confirm := typer.confirm(
+            "Are you sure you want to overwrite the secrets file?"
+        ):
             console.print("[yellow]Overwriting the secrets file...[/]")
             utils.create_secrets_file(path_to_secrets)
         else:
             console.print("[red]Aborting...[/]")
             raise typer.Exit()
+    elif check_if_path_exists(path_to_secrets):
+        console.print("[green]✔[/] Secrets file exists")
     else:
-        # check if file containing the secrets exists
-        if check_if_path_exists(path_to_secrets):
-            console.print("[green]✔[/] Secrets file exists")
-        else:
-            console.print("[red]✘[/] Secrets file does not exist, creating it...")
-            utils.create_secrets_file(path_to_secrets)
+        console.print("[red]✘[/] Secrets file does not exist, creating it...")
+        utils.create_secrets_file(path_to_secrets)
 
 
 @app.command("run")

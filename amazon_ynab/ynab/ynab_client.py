@@ -73,7 +73,9 @@ class YNABClient:
                 "Enter a number: ",
                 console=console,
                 show_choices=True,
-                choices=list(str(i) for i in list(range(1, len(self.all_budgets) + 1))),
+                choices=[
+                    str(i) for i in list(range(1, len(self.all_budgets) + 1))
+                ],
             ).ask()
         )
 
@@ -101,13 +103,11 @@ class YNABClient:
 
         search_by = re.compile(r"^.*[amazon|AMZN].*$", re.IGNORECASE)
 
-        filtered_transactions = filter(
+        return filter(
             lambda item: search_by.match(item["payee_name"])
             and (item["memo"] in ["", None]),
             transactions,
         )
-
-        return filtered_transactions
 
     def parse_transactions(self) -> None:
         """

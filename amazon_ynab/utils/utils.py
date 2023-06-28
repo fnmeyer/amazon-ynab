@@ -64,6 +64,4 @@ def not_none(obj: T | None, *, message: str | None = None) -> T:
 
 
 def days_back_to_cutoff_date(days_back: int) -> datetime:
-    cutoff_date = datetime.today() - timedelta(days=days_back)
-
-    return cutoff_date
+    return datetime.now() - timedelta(days=days_back)

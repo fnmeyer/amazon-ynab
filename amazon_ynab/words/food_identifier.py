@@ -9,9 +9,6 @@ nltk.download("wordnet")
 
 
 def if_food(word: str) -> Literal[0, 1]:
-    syns = wn.synsets(str(word), pos=wn.NOUN)
+    syns = wn.synsets(word, pos=wn.NOUN)
 
-    for syn in syns:
-        if syn and ("food" in syn.lexname()):
-            return 1
-    return 0
+    return next((1 for syn in syns if syn and ("food" in syn.lexname())), 0)
